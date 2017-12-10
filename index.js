@@ -1,16 +1,17 @@
-const Koa = require('koa')
+const Koa = require('koa');
 const route = require('koa-route');
 const request = require('request-promise');
+
 const app = new Koa();
 
 const PORT = process.env.PORT || 5000
-// const REDIRECT_URI = 'http://localhost:5000/api/auth/done';
-const REDIRECT_URI = 'https://instagallery-api.herokuapp.com/api/auth/done';
-const INSTAGRAM_URL = 'https://api.instagram.com/';
-const CLIENT_ID = '20d1ab5af77445d9b09a46eaa6e3bb0c';
-const CLIENT_SECRET = 'add27729a01b41bead3d93da09581881';
+// // const REDIRECT_URI = 'http://localhost:5000/api/auth/done';
+// const REDIRECT_URI = 'https://instagallery-api.herokuapp.com/api/auth/done';
+// const INSTAGRAM_URL = 'https://api.instagram.com/';
+// const CLIENT_ID = '20d1ab5af77445d9b09a46eaa6e3bb0c';
+// const CLIENT_SECRET = 'add27729a01b41bead3d93da09581881';
 
-let tagVar;
+// let tagVar;
 
 app.use((ctx) => {
     ctx.set('Access-Control-Allow-Origin', '*');
@@ -63,4 +64,4 @@ app.use((ctx) => {
 //     ctx.body = { message: 'Successfully Authenticated', response: photos.data };
 // }));
 
-app.listen(PORT, () => console.log(`Listening on ${ PORT }`));
+app.listen(80, () => console.log(`Listening on ${ PORT }`));
