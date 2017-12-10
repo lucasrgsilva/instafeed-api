@@ -13,11 +13,11 @@ const PORT = process.env.PORT || 5000
 
 // let tagVar;
 
-app.use((ctx) => {
+app.use(route.get('/api/tag', async (ctx) => {
     ctx.set('Access-Control-Allow-Origin', '*');
     ctx.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     ctx.body = { 'Message': 'Successfuly started' };
-});
+}));
 
 // app.use(route.get('/api/tag', async (ctx) => {
 //     ctx.set('Access-Control-Allow-Origin', '*');
