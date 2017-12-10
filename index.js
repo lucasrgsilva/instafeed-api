@@ -4,14 +4,14 @@ const request = require('request-promise');
 const app = new Koa();
 
 const PORT = process.env.PORT || 5000
-const REDIRECT_URI = 'http://localhost:5000/api/auth/done';
+// const REDIRECT_URI = 'http://localhost:5000/api/auth/done';
+const REDIRECT_URI = 'https://instagallery-api.herokuapp.com/api/auth/done';
 const INSTAGRAM_URL = 'https://api.instagram.com/';
 const CLIENT_ID = '20d1ab5af77445d9b09a46eaa6e3bb0c';
 const CLIENT_SECRET = 'add27729a01b41bead3d93da09581881';
 
 let tagVar;
 
-// const REDIRECT_URI = 'https://mastim-api.herokuapp.com/api/hashtag/nature';
 
 app.use(route.get('/api/tag', async (ctx) => {
     ctx.set('Access-Control-Allow-Origin', '*');
