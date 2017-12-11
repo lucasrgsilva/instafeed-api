@@ -64,4 +64,4 @@ app.use(route.get('/api/tag', async (ctx) => {
 //     ctx.body = { message: 'Successfully Authenticated', response: photos.data };
 // }));
 
-app.listen(80, () => console.log(`Listening on ${ PORT }`));
+app.listen(PORT, () => console.log(`Listening on ${ PORT }`));

@@ -4,17 +4,14 @@
   "description": "Instagram Gallery API",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "node test.js"
+    "start": "node index.js"
   },
   "author": "Lucas Rodrigues da Silva",
   "license": "ISC",
   "dependencies": {
     "koa": "^2.4.1",
     "koa-route": "^3.2.0",
+    "request": "^2.83.0",
     "request-promise": "^4.2.2"
-  },
-  "devDependencies": {
-    "request": "^2.83.0"
   }
 }
