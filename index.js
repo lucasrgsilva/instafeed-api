@@ -4,7 +4,7 @@ const request = require('request-promise');
 const redis = require("redis");
 const bluebird = require("bluebird");
 const app = new Koa();
-const client = redis.createClient();
+const client = redis.createClient({url: "redis://h:pe4f83e0de2a404ccc4eaeb7779e33289841caea0cb44ec920184d5d00a4ffe1d@ec2-34-233-217-71.compute-1.amazonaws.com:60699"});
 
 bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
