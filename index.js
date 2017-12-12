@@ -55,7 +55,8 @@ app.use(route.get('/api/tag/:tag', async (ctx, tag) => {
 
     } else {
         let url = INSTAGRAM_URL + `oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=public_content`;
-        ctx.body = { message: 'Not authenticated', redirectUrl: url };
+        // ctx.body = { message: 'Not authenticated', redirectUrl: url };
+        ctx.redirect(url);
     };
 
 }));
