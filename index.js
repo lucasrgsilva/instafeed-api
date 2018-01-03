@@ -45,7 +45,7 @@ app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag) => {
     const access_token = await client.getAsync(user);
     const code = ctx.request.query.code;
 
-    ctx.body = { response: 'ctx.request'};
+    ctx.body = { response: ctx.request};
     // if (access_token) {
 
     //     let photos = await request({
