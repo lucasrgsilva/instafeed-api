@@ -45,52 +45,53 @@ app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag) => {
     const access_token = await client.getAsync(user);
     const code = ctx.request.query.code;
 
-    ctx.body = { response: ctx.request};
-    // if (access_token) {
+    // ctx.body = { response: ctx.request.header.referer};
 
-    //     let photos = await request({
-    //         url: INSTAGRAM_URL + `v1/tags/${tag}/media/recent?access_token=${access_token}`,
-    //         method: 'GET',
-    //         json: true
-    //     });
+    if (access_token) {
 
-    //     ctx.body = { message: 'Authenticated', images: photos.data };
+        let photos = await request({
+            url: INSTAGRAM_URL + `v1/tags/${tag}/media/recent?access_token=${access_token}`,
+            method: 'GET',
+            json: true
+        });
 
-    // } else if (code) {
+        ctx.body = { message: 'Authenticated', images: photos.data };
 
-    //     let auth_user = await request({
-    //         uri: INSTAGRAM_URL + 'oauth/access_token/',
-    //         method: 'POST',
-    //         form: {
-    //             client_id: CLIENT_ID,
-    //             client_secret: CLIENT_SECRET,
-    //             grant_type: 'authorization_code',
-    //             redirect_uri: 'ctx.request.href',
-    //             code: code
-    //         },
-    //         json: true
-    //     });
+    } else if (code) {
 
-    //     await client.set('access_token', auth_user.access_token);
+        let auth_user = await request({
+            uri: INSTAGRAM_URL + 'oauth/access_token/',
+            method: 'POST',
+            form: {
+                client_id: CLIENT_ID,
+                client_secret: CLIENT_SECRET,
+                grant_type: 'authorization_code',
+                redirect_uri: 'ctx.request.header.referer',
+                code: code
+            },
+            json: true
+        });
 
-    //     let photos = await request({
-    //         url: INSTAGRAM_URL + `v1/tags/${tagVar}/media/recent?access_token=${auth_user.access_token}`,
-    //         method: 'GET',
-    //         json: true
-    //     });
+        await client.set('access_token', auth_user.access_token);
 
-    //     ctx.body = { message: 'Authenticated', images: photos.data };
+        let photos = await request({
+            url: INSTAGRAM_URL + `v1/tags/${tagVar}/media/recent?access_token=${auth_user.access_token}`,
+            method: 'GET',
+            json: true
+        });
 
-    // } else {
-    //     let auth_params = {
-    //         instagram_url: INSTAGRAM_URL + 'oauth/authorize',
-    //         redirect_uri: REDIRECT_URI,
-    //         client_id: CLIENT_ID,
-    //         response_type: 'code',
-    //         scope: 'public_content'
-    //     }
-    //     ctx.body = { message: 'Not authenticated', auth_params };
-    // };
+        ctx.body = { message: 'Authenticated', images: photos.data };
+
+    } else {
+        let auth_params = {
+            instagram_url: INSTAGRAM_URL + 'oauth/authorize',
+            redirect_uri: REDIRECT_URI,
+            client_id: CLIENT_ID,
+            response_type: 'code',
+            scope: 'public_content'
+        }
+        ctx.body = { message: 'Not authenticated', auth_params };
+    };
 
 }));
 
