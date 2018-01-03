@@ -71,7 +71,7 @@ app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag) => {
             json: true
         });
 
-        await client.set('access_token', auth_user.access_token);
+        await client.set(access_token, auth_user.access_token);
 
         let photos = await request({
             url: INSTAGRAM_API + `v1/tags/${tagVar}/media/recent?access_token=${auth_user.access_token}`,
