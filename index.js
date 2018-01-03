@@ -12,9 +12,8 @@ bluebird.promisifyAll(redis.RedisClient.prototype);
 bluebird.promisifyAll(redis.Multi.prototype);
 
 const PORT = process.env.PORT || 5000
-const REDIRECT_URI = 'http://localhost:4200/#/pages/gallery/feed';
 // const REDIRECT_URI = 'http://localhost:5000/api/auth/done';
-// const REDIRECT_URI = 'https://instagallery-api.herokuapp.com/api/auth/done';
+const REDIRECT_URI = 'https://instagallery-api.herokuapp.com/api/auth/done';
 const INSTAGRAM_URL = 'https://api.instagram.com/';
 const CLIENT_ID = '20d1ab5af77445d9b09a46eaa6e3bb0c';
 const CLIENT_SECRET = 'add27729a01b41bead3d93da09581881';
@@ -56,9 +55,14 @@ app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag ) => {
         ctx.body = { message: 'Authenticated', images: photos.data };
 
     } else {
-        let url = INSTAGRAM_URL + `oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=public_content`;
-        ctx.body = { message: 'Not authenticated', redirectUrl: url };
-        // ctx.redirect(url);
+        let auth_params = {
+            instagram_url: INSTAGRAM_URL + 'oauth/authorize',
+            redirect_uri: REDIRECT_URI,
+            client_id: CLIENT_ID,
+            response_type: 'code',
+            scope: 'public_content'
+        }
+        ctx.body = { message: 'Not authenticated', auth_params };
     };
 
 }));
@@ -90,7 +94,7 @@ app.use(route.get('/api/auth/done', async (ctx, tag) => {
         json: true
     });
 
-    ctx.body = { message: 'Successfully Authenticated', response: photos.data };
+    ctx.body = { message: 'Authenticated', images: photos.data };
 }));
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
