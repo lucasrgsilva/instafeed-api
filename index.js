@@ -44,6 +44,7 @@ app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag) => {
 
     const access_token = await client.getAsync(user);
     const code = ctx.request.query.code;
+    const redirect_uri = ctx.request.query.redirect_uri;
 
     if (access_token) {
 
@@ -64,7 +65,7 @@ app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag) => {
                 client_id: CLIENT_ID,
                 client_secret: CLIENT_SECRET,
                 grant_type: 'authorization_code',
-                redirect_uri: ctx.request.header.referer,
+                redirect_uri: redirect_uri,
                 code: code
             },
             json: true
