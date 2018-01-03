@@ -64,7 +64,7 @@ app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag) => {
                 client_id: CLIENT_ID,
                 client_secret: CLIENT_SECRET,
                 grant_type: 'authorization_code',
-                redirect_uri: 'ctx.request.header.referer',
+                redirect_uri: ctx.request.header.referer,
                 code: code
             },
             json: true
