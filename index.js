@@ -93,7 +93,7 @@ router
     }
 
     const event = await Event.findById(id);
-    const user = await User.findById(id.userId);
+    const user = await User.findById(event.userId);
     
     if (user.access_token) {
       
@@ -112,15 +112,8 @@ router
       return ctx.body = { message: 'Successfully getted', event };
     } 
     
-    const auth_params = {
-      instagram_url: INSTAGRAM_API + 'oauth/authorize',
-      client_id: CLIENT_ID,
-      response_type: 'code',
-      scope: 'public_content'
-    }
-
-    ctx.body.status = 401;
-    ctx.body = { message: 'No instagram authorized', auth_params };
+    ctx.status = 403;
+    ctx.body = { message: 'No instagram authorized' };
 
   })
 
@@ -128,21 +121,21 @@ router
     ctx.body = { message: 'DELETE /api/events/:id - works' };
   })
 
+  .get('/api/instagram/credentials', (ctx, next) => {
+    const auth_params = {
+      instagram_url: INSTAGRAM_API + 'oauth/authorize',
+      client_id: CLIENT_ID,
+      response_type: 'code',
+      scope: 'public_content'
+    }
+    ctx.body = { message: 'Instagram oauth2 credentials', auth_params };
+  })
+
   .get('/api/instagram/auth', async (ctx, next) => {
     
     const code = ctx.request.query.code;
     const userId = ctx.request.query.id;
     const redirect_uri = ctx.request.query.redirect_uri;
-  
-    if (!code) {
-      const auth_params = {
-        instagram_url: INSTAGRAM_API + 'oauth/authorize',
-        client_id: CLIENT_ID,
-        response_type: 'code',
-        scope: 'public_content'
-      }
-      ctx.body = { message: 'Instagram oauth2 credentials', auth_params };
-    }
   
     const auth_user = await request({
       uri: INSTAGRAM_API + 'oauth/access_token/',
