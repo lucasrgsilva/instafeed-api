@@ -53,8 +53,8 @@ router
   })
 
   .get('/api/events', async (ctx, next) => {
+    const events = await Event.find();
     ctx.body = { message: 'No events yet' };
-    // const events = await Event.find();
 
     // if (events.length == 0) {
     //   ctx.status = 204;
