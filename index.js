@@ -54,14 +54,13 @@ router
 
   .get('/api/events', async (ctx, next) => {
     const events = await Event.find();
-    ctx.body = { message: 'No events yet' };
 
-    // if (events.length == 0) {
-    //   ctx.status = 204;
-    //   return ctx.body = { message: 'No events yet' };
-    // }
+    if (events.length == 0) {
+      ctx.status = 204;
+      return ctx.body = { message: 'No events yet' };
+    }
 
-    // ctx.body = { message: 'Successfully getted all events', events };
+    ctx.body = { message: 'Successfully getted all events', events };
   })
 
   .post('/api/events', async (ctx, next) => {
