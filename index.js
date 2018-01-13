@@ -119,7 +119,8 @@ router
       scope: 'public_content'
     }
 
-    ctx.body = { message: 'Not authenticated', auth_params };
+    ctx.body.status = 401;
+    ctx.body = { message: 'No instagram authorized', auth_params };
 
   })
 
@@ -127,12 +128,22 @@ router
     ctx.body = { message: 'DELETE /api/events/:id - works' };
   })
 
-  .get('/api/auth', async (ctx, next) => {
-
+  .get('/api/instagram/auth', async (ctx, next) => {
+    
     const code = ctx.request.query.code;
     const userId = ctx.request.query.id;
     const redirect_uri = ctx.request.query.redirect_uri;
-
+  
+    if (!code) {
+      const auth_params = {
+        instagram_url: INSTAGRAM_API + 'oauth/authorize',
+        client_id: CLIENT_ID,
+        response_type: 'code',
+        scope: 'public_content'
+      }
+      ctx.body = { message: 'Instagram oauth2 credentials', auth_params };
+    }
+  
     const auth_user = await request({
       uri: INSTAGRAM_API + 'oauth/access_token/',
       method: 'POST',
