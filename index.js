@@ -134,9 +134,14 @@ router
   .get('/api/instagram/auth', async (ctx, next) => {
     
     const code = ctx.request.query.code;
-    const userId = ctx.request.query.id;
+    const eventId = ctx.request.query.eventId;
     const redirect_uri = ctx.request.query.redirect_uri;
-  
+
+    if (!ObjectID.isValid(eventId)) {
+      ctx.status = 404;
+      return ctx.body = { message: 'Invalid event' };
+    }
+
     const auth_user = await request({
       uri: INSTAGRAM_API + 'oauth/access_token/',
       method: 'POST',
@@ -150,7 +155,9 @@ router
       json: true
     });
 
-    await User.findByIdAndUpdate(userId,
+    const event = await Event.findById(eventId);
+
+    await User.findByIdAndUpdate(event.userId,
       { $set: { access_token: auth_user.access_token } },
       { new: true }
     );
