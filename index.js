@@ -80,7 +80,7 @@ router
     ctx.body = { message: 'PUT /api/events - works' };
   })
 
-  .get('/api/events/:id', (ctx, next) => {
+  .get('/api/events/:id', async (ctx, next) => {
     const id = ctx.params.id;
 
     if (!ObjectID.isValid(id)) {
