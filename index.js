@@ -53,8 +53,9 @@ router
   })
 
   .get('/api/events', async (ctx, next) => {
-    const events = await Event.find().then(
-      () => console.log("AGORA FOI CARALHO"),
+    let events = [];
+    await Event.find().then(
+      (ev) => { events = ev; console.log("AGORA FOI CARALHO")},
       (err) => console.log("QUE PORRA TA ACONTECENDO", err)
     );
 
