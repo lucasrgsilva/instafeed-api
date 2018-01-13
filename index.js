@@ -99,7 +99,7 @@ router
       
       const photosPromise = [];
 
-      user.hashtags.forEach(hashtag => {
+      event.hashtags.forEach(hashtag => {
         photosPromise.push(request({
           url: INSTAGRAM_API + `v1/tags/${hashtag}/media/recent?access_token=${user.access_token}`,
           method: 'GET',
