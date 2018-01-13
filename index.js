@@ -53,7 +53,10 @@ router
   })
 
   .get('/api/events', async (ctx, next) => {
-    const events = await Event.find();
+    const events = await Event.find().then(
+      () => console.log("AGORA FOI CARALHO"),
+      (err) => console.log("QUE PORRA TA ACONTECENDO", err)
+    );
 
     if (events.length == 0) {
       ctx.status = 204;
