@@ -149,7 +149,7 @@ router
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
         grant_type: 'authorization_code',
-        redirect_uri: redirect_uri,
+        redirect_uri: `${redirect_uri}?eventId=${eventId}` ,
         code: code
       },
       json: true
