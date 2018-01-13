@@ -1,103 +1,211 @@
 const Koa = require('koa');
-const route = require('koa-route');
+const Router = require('koa-router');
+const bodyParser = require('koa-bodyparser');
+const cors = require('@koa/cors');
 const request = require('request-promise');
-const redis = require("redis");
-const bluebird = require("bluebird");
-const app = new Koa();
-const client = redis.createClient({
-    url: "redis://h:pe4f83e0de2a404ccc4eaeb7779e33289841caea0cb44ec920184d5d00a4ffe1d@ec2-34-233-217-71.compute-1.amazonaws.com:60699"
+const mongoose = require('mongoose');
+const { ObjectID } = require('mongodb');
+
+const { Event } = require('./models/event');
+const { User } = require('./models/user');
+
+mongoose.connect('mongodb://dmlkforis:lkmskmcsd@cluster0-shard-00-00-topof.mongodb.net:27017,cluster0-shard-00-01-topof.mongodb.net:27017,cluster0-shard-00-02-topof.mongodb.net:27017/instagram?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin', { useMongoClient: true }, () => {
+  console.log("Connected to mongodb...")
 });
 
-bluebird.promisifyAll(redis.RedisClient.prototype);
-bluebird.promisifyAll(redis.Multi.prototype);
-
 const PORT = process.env.PORT || 5000
-// const REDIRECT_URI = 'http://localhost:5000/api/auth/done';
-// const REDIRECT_URI = 'https://instagallery-api.herokuapp.com/api/auth/done';
 const INSTAGRAM_API = 'https://api.instagram.com/';
 const CLIENT_ID = '20d1ab5af77445d9b09a46eaa6e3bb0c';
 const CLIENT_SECRET = 'add27729a01b41bead3d93da09581881';
 
-let tagVar;
+const app = new Koa();
+const router = new Router();
 
-client.on('connect', () => {
-    console.log("Connected on redis");
-    // await client.quit()
-});
+app.use(bodyParser());
+app.use(cors());
 
-client.on("error", (err) => {
-    console.log("Error " + err);
-});
+router
+  .get('/api/', (ctx, next) => {
+    ctx.body = 'Hello World!';
+  })
 
-app.use(route.get('/api/tag', async (ctx) => {
-    ctx.set('Access-Control-Allow-Origin', '*');
-    ctx.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    ctx.status = 400;
-    ctx.body = { 'Message': 'No tag specified' };
-}));
+  .get('/api/user/:id', async (ctx, next) => {
+    const id = ctx.params.id;
 
-app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag) => {
+    if (!ObjectID.isValid(id)) {
+      ctx.status = 404;
+      return ctx.body = { message: 'User not found' };
+    }
 
-    ctx.set('Access-Control-Allow-Origin', '*');
-    ctx.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    tagVar = tag;
+    const user = await User.findById(id);
+    ctx.body = { message: 'Successfully getted the user', user };
+  })
 
-    const access_token = await client.getAsync(user);
+  .post('/api/user', async (ctx, next) => {
+    const user = new User({
+      name: ctx.request.body.name
+    });
+
+    await user.save();
+
+    ctx.status = 201;
+    ctx.body = { message: 'Successfully created the user', user };
+  })
+
+  .get('/api/events', async (ctx, next) => {
+    const events = await Event.find();
+
+    if (events.length == 0) {
+      ctx.status = 204;
+      return ctx.body = { message: 'No events yet' };
+    }
+
+    ctx.body = { message: 'Successfully getted all events', events };
+  })
+
+  .post('/api/events', async (ctx, next) => {
+    const event = new Event({
+      title: ctx.request.body.title,
+      hashtag: ctx.request.body.hashtag,
+      userId: ctx.request.body.userId
+    });
+
+    await event.save();
+
+    ctx.status = 201;
+    ctx.body = { message: 'Successfully created the event', event };
+  })
+
+  .put('/api/events', (ctx, next) => {
+    ctx.body = { message: 'PUT /api/events - works' };
+  })
+
+  .get('/api/events/:id', (ctx, next) => {
+    const id = ctx.params.id;
+
+    if (!ObjectID.isValid(id)) {
+      ctx.status = 404;
+      return ctx.body = { message: 'Event not found' };
+    }
+
+    const event = await Event.findById(id);
+    const user = await User.findById(id.userId);
+    
+    if (user.access_token) {
+      
+      const photosPromise = [];
+
+      user.hashtags.forEach(hashtag => {
+        photosPromise.push(request({
+          url: INSTAGRAM_API + `v1/tags/${hashtag}/media/recent?access_token=${user.access_token}`,
+          method: 'GET',
+          json: true
+        }));
+      });
+
+      const photos = Promise.all(photosPromise);
+
+      return ctx.body = { message: 'Successfully getted', event };
+    } 
+    
+    const auth_params = {
+      instagram_url: INSTAGRAM_API + 'oauth/authorize',
+      client_id: CLIENT_ID,
+      response_type: 'code',
+      scope: 'public_content'
+    }
+
+    ctx.body = { message: 'Not authenticated', auth_params };
+
+  })
+
+  .del('/api/events/:id', (ctx, next) => {
+    ctx.body = { message: 'DELETE /api/events/:id - works' };
+  })
+
+  .get('/api/auth', async (ctx, next) => {
+
     const code = ctx.request.query.code;
+    const userId = ctx.request.query.id;
     const redirect_uri = ctx.request.query.redirect_uri;
 
-    if (access_token) {
+    const auth_user = await request({
+      uri: INSTAGRAM_API + 'oauth/access_token/',
+      method: 'POST',
+      form: {
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        redirect_uri: redirect_uri,
+        code: code
+      },
+      json: true
+    });
 
-        let photos = await request({
-            url: INSTAGRAM_API + `v1/tags/${tag}/media/recent?access_token=${access_token}`,
-            method: 'GET',
-            json: true
-        });
+    await User.findByIdAndUpdate(userId,
+      { $set: { access_token: auth_user.access_token } },
+      { new: true }
+    );
 
-        ctx.body = { message: 'Authenticated', images: photos.data };
+    ctx.body = { message: 'Succesfully authenticated' };
 
-    } else if (code) {
+  });
 
-        let auth_user = await request({
-            uri: INSTAGRAM_API + 'oauth/access_token/',
-            method: 'POST',
-            form: {
-                client_id: CLIENT_ID,
-                client_secret: CLIENT_SECRET,
-                grant_type: 'authorization_code',
-                redirect_uri: redirect_uri,
-                code: code
-            },
-            json: true
-        });
+// app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag) => {
 
-        await client.set(user, auth_user.access_token);
+//   tagVar = tag;
 
-        let photos = await request({
-            url: INSTAGRAM_API + `v1/tags/${tagVar}/media/recent?access_token=${auth_user.access_token}`,
-            method: 'GET',
-            json: true
-        });
+//   const access_token = await client.getAsync(user);
+//   const code = ctx.request.query.code;
+//   const redirect_uri = ctx.request.query.redirect_uri;
 
-        ctx.body = { message: 'Authenticated', images: photos.data };
+//   if (access_token) {
 
-    } else {
-        let auth_params = {
-            instagram_url: INSTAGRAM_API + 'oauth/authorize',
-            client_id: CLIENT_ID,
-            response_type: 'code',
-            scope: 'public_content'
-        }
-        ctx.body = { message: 'Not authenticated', auth_params };
-    };
+//     let photos = await request({
+//       url: INSTAGRAM_API + `v1/tags/${tag}/media/recent?access_token=${access_token}`,
+//       method: 'GET',
+//       json: true
+//     });
 
-}));
+//     ctx.body = { message: 'Authenticated', images: photos.data };
 
-app.use(route.get('/api/auth/done', async (ctx, tag) => {
-    ctx.set('Access-Control-Allow-Origin', '*');
-    ctx.set('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+//   } else if (code) {
 
+//     let auth_user = await request({
+//       uri: INSTAGRAM_API + 'oauth/access_token/',
+//       method: 'POST',
+//       form: {
+//         client_id: CLIENT_ID,
+//         client_secret: CLIENT_SECRET,
+//         grant_type: 'authorization_code',
+//         redirect_uri: redirect_uri,
+//         code: code
+//       },
+//       json: true
+//     });
 
-}));
+//     await client.set(user, auth_user.access_token);
+
+//     let photos = await request({
+//       url: INSTAGRAM_API + `v1/tags/${tagVar}/media/recent?access_token=${auth_user.access_token}`,
+//       method: 'GET',
+//       json: true
+//     });
+
+//     ctx.body = { message: 'Authenticated', images: photos.data };
+
+//   } else {
+//     let auth_params = {
+//       instagram_url: INSTAGRAM_API + 'oauth/authorize',
+//       client_id: CLIENT_ID,
+//       response_type: 'code',
+//       scope: 'public_content'
+//     }
+//     ctx.body = { message: 'Not authenticated', auth_params };
+//   };
+
+// }));
+
+app.use(router.routes());
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
