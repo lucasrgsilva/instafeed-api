@@ -70,7 +70,7 @@ router
   .post('/api/events', async (ctx, next) => {
     const event = new Event({
       title: ctx.request.body.title,
-      hashtag: ctx.request.body.hashtag,
+      hashtags: ctx.request.body.hashtags,
       userId: ctx.request.body.userId
     });
 
