@@ -125,7 +125,8 @@ router
 
   .del('/api/events/:id', async (ctx, next) => {
     const id = ctx.params.id;
-    await Event.findOneAndRemove({ _id: id });
+    await Event.remove({});
+    // await Event.findOneAndRemove({ _id: id });
 
     ctx.body = { message: 'Successfully deleted' };
   })
