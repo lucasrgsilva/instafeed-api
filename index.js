@@ -53,11 +53,7 @@ router
   })
 
   .get('/api/events', async (ctx, next) => {
-    let events = [];
-    await Event.find().then(
-      (ev) => { events = ev; console.log("AGORA FOI CARALHO") },
-      (err) => console.log("QUE PORRA TA ACONTECENDO", err)
-    );
+    const events = await Event.find();
 
     if (events.length == 0) {
       ctx.status = 204;
@@ -109,15 +105,13 @@ router
 
       const images = await Promise.all(instagramPromise);
 
-      const reducer = (accumulator, currentValue) => {
-        return { data: [...accumulator.data, ...currentValue.data] };
-      }
-
       return ctx.body = {
         message: 'Successfully getted',
         images:
           images
-            .reduce(reducer, { data: [] }).data
+            .reduce((accumulator, currentValue) => {
+              return { data: [...accumulator.data, ...currentValue.data] };
+            }, { data: [] }).data
             .filter((image, index, self) => {
               return index === self.findIndex(e => e.id === image.id);
             })
@@ -129,8 +123,11 @@ router
 
   })
 
-  .del('/api/events/:id', (ctx, next) => {
-    ctx.body = { message: 'DELETE /api/events/:id - works' };
+  .del('/api/events/:id', async (ctx, next) => {
+    const id = ctx.params.id;
+    await Event.findOneAndRemove({ _id: id });
+
+    ctx.body = { message: 'Successfully deleted' };
   })
 
   .get('/api/instagram/credentials', (ctx, next) => {
