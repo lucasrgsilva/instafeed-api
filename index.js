@@ -108,11 +108,20 @@ router
       });
 
       const images = await Promise.all(instagramPromise);
+
       const reducer = (accumulator, currentValue) => {
-        return { data: [...accumulator.data, ...currentValue.data]};
+        return { data: [...accumulator.data, ...currentValue.data] };
       }
 
-      return ctx.body = { message: 'Successfully getted', images: images.reduce(reducer, { data: [] }) };
+      return ctx.body = {
+        message: 'Successfully getted',
+        images:
+          images
+            .reduce(reducer, { data: [] }).data
+            .filter((image, index, self) => {
+              return index === self.findIndex(e => e.id === image.id);
+            })
+      };
     }
 
     ctx.status = 403;
