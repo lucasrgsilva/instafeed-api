@@ -55,7 +55,7 @@ router
   .get('/api/events', async (ctx, next) => {
     let events = [];
     await Event.find().then(
-      (ev) => { events = ev; console.log("AGORA FOI CARALHO")},
+      (ev) => { events = ev; console.log("AGORA FOI CARALHO") },
       (err) => console.log("QUE PORRA TA ACONTECENDO", err)
     );
 
@@ -94,24 +94,27 @@ router
 
     const event = await Event.findById(id);
     const user = await User.findById(event.userId);
-    
+
     if (user.access_token) {
-      
-      const photosPromise = [];
+
+      const instagramPromise = [];
 
       event.hashtags.forEach(hashtag => {
-        photosPromise.push(request({
+        instagramPromise.push(request({
           url: INSTAGRAM_API + `v1/tags/${hashtag}/media/recent?access_token=${user.access_token}`,
           method: 'GET',
           json: true
         }));
       });
 
-      const photos = Promise.all(photosPromise);
+      const images = await Promise.all(instagramPromise);
+      const reducer = (accumulator, currentValue) => {
+        return { data: [...accumulator.data, ...currentValue.data]};
+      }
 
-      return ctx.body = { message: 'Successfully getted', event };
-    } 
-    
+      return ctx.body = { message: 'Successfully getted', images: images.reduce(reducer, { data: [] }) };
+    }
+
     ctx.status = 403;
     ctx.body = { message: 'No instagram authorized' };
 
@@ -132,7 +135,7 @@ router
   })
 
   .get('/api/instagram/auth', async (ctx, next) => {
-    
+
     const code = ctx.request.query.code;
     const eventId = ctx.request.query.eventId;
     const redirect_uri = ctx.request.query.redirect_uri;
@@ -149,7 +152,7 @@ router
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
         grant_type: 'authorization_code',
-        redirect_uri: `${redirect_uri}?eventId=${eventId}` ,
+        redirect_uri: `${redirect_uri}?eventId=${eventId}`,
         code: code
       },
       json: true
