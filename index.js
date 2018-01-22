@@ -5,9 +5,11 @@ const cors = require('@koa/cors');
 const request = require('request-promise');
 const mongoose = require('mongoose');
 const { ObjectID } = require('mongodb');
+const _ = require('lodash');
 
 const { Event } = require('./models/event');
 const { User } = require('./models/user');
+const { auth_middleware } = require('./middleware/auth-middleware');
 
 mongoose.connect('mongodb://dmlkforis:lkmskmcsd@cluster0-shard-00-00-topof.mongodb.net:27017,cluster0-shard-00-01-topof.mongodb.net:27017,cluster0-shard-00-02-topof.mongodb.net:27017/instagram?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin', { useMongoClient: true }, () => {
   console.log("Connected to mongodb...")
@@ -26,7 +28,12 @@ app.use(cors());
 
 router
   .get('/api/', (ctx, next) => {
-    ctx.body = 'Hello World!';
+    ctx.body = 'It works!';
+  })
+
+  .get('/api/user', auth_middleware, async (ctx, next) => {
+    const user = await User.find();
+    ctx.body = { message: 'Successfully getted', user };
   })
 
   .get('/api/user/:id', async (ctx, next) => {
@@ -41,15 +48,28 @@ router
     ctx.body = { message: 'Successfully getted the user', user };
   })
 
+  .post('/api/user/drop', (ctx, next) => {
+    User.collection.drop().then(
+      ctx.body = {
+        message: 'Successfully droped'
+      }
+    );
+  })
+
   .post('/api/user', async (ctx, next) => {
-    const user = new User({
-      name: ctx.request.body.name
-    });
+    const body = _.pick(ctx.request.body, ['email', 'name', 'password']);
+    const user = new User(body);
 
-    await user.save();
+    try {
+      const userSaved = await user.save();
+      const token = await userSaved.generateAuthToken();
 
-    ctx.status = 201;
-    ctx.body = { message: 'Successfully created the user', user };
+      ctx.status = 201;
+      ctx.body = { message: 'Successfully authenticated', user: userSaved, data: { token } };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = { message: 'Something goes wrong', error };
+    }
   })
 
   .get('/api/events', async (ctx, next) => {
@@ -87,46 +107,52 @@ router
       ctx.status = 404;
       return ctx.body = { message: 'Event not found' };
     }
+    try {
 
-    const event = await Event.findById(id);
-    const user = await User.findById(event.userId);
+      const event = await Event.findById(id);
+      const user = await User.findById(event.userId);
 
-    if (user.access_token) {
+      if (user.access_token) {
 
-      const instagramPromise = [];
+        const instagramPromise = [];
 
-      event.hashtags.forEach(hashtag => {
-        instagramPromise.push(request({
-          url: INSTAGRAM_API + `v1/tags/${hashtag}/media/recent?access_token=${user.access_token}`,
-          method: 'GET',
-          json: true
-        }));
-      });
+        event.hashtags.forEach(hashtag => {
+          instagramPromise.push(request({
+            url: INSTAGRAM_API + `v1/tags/${hashtag}/media/recent?access_token=${user.access_token}`,
+            method: 'GET',
+            json: true
+          }));
+        });
 
-      const images = await Promise.all(instagramPromise);
+        const images = await Promise.all(instagramPromise);
 
-      return ctx.body = {
-        message: 'Successfully getted',
-        images:
-          images
-            .reduce((accumulator, currentValue) => {
-              return { data: [...accumulator.data, ...currentValue.data] };
-            }, { data: [] }).data
-            .filter((image, index, self) => {
-              return index === self.findIndex(e => e.id === image.id);
-            })
-      };
+        return ctx.body = {
+          message: 'Successfully getted',
+          images:
+            images
+              .reduce((accumulator, currentValue) => {
+                return { data: [...accumulator.data, ...currentValue.data] };
+              }, { data: [] }).data
+              .filter((image, index, self) => {
+                return index === self.findIndex(e => e.id === image.id);
+              })
+        };
+      } else {
+        ctx.status = 403;
+        ctx.body = { message: 'No instagram authorized' };;
+      }
+
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = { message: 'Something goes wrong', error };;
     }
-
-    ctx.status = 403;
-    ctx.body = { message: 'No instagram authorized' };
 
   })
 
   .del('/api/events/:id', async (ctx, next) => {
     const id = ctx.params.id;
-    await Event.remove({});
-    // await Event.findOneAndRemove({ _id: id });
+    // await Event.remove({});
+    await Event.findOneAndRemove({ _id: id });
 
     ctx.body = { message: 'Successfully deleted' };
   })
@@ -174,62 +200,21 @@ router
 
     ctx.body = { message: 'Succesfully authenticated' };
 
-  });
+  })
 
-// app.use(route.get('/api/tag/:user/:tag', async (ctx, user, tag) => {
+  .post('/api/auth/login', async (ctx, next) => {
+    const body = _.pick(ctx.request.body, ['email', 'password']);
 
-//   tagVar = tag;
+    try {
+      const user = await User.authenticate(body.email, body.password);
+      const token = await user.generateAuthToken();
 
-//   const access_token = await client.getAsync(user);
-//   const code = ctx.request.query.code;
-//   const redirect_uri = ctx.request.query.redirect_uri;
-
-//   if (access_token) {
-
-//     let photos = await request({
-//       url: INSTAGRAM_API + `v1/tags/${tag}/media/recent?access_token=${access_token}`,
-//       method: 'GET',
-//       json: true
-//     });
-
-//     ctx.body = { message: 'Authenticated', images: photos.data };
-
-//   } else if (code) {
-
-//     let auth_user = await request({
-//       uri: INSTAGRAM_API + 'oauth/access_token/',
-//       method: 'POST',
-//       form: {
-//         client_id: CLIENT_ID,
-//         client_secret: CLIENT_SECRET,
-//         grant_type: 'authorization_code',
-//         redirect_uri: redirect_uri,
-//         code: code
-//       },
-//       json: true
-//     });
-
-//     await client.set(user, auth_user.access_token);
-
-//     let photos = await request({
-//       url: INSTAGRAM_API + `v1/tags/${tagVar}/media/recent?access_token=${auth_user.access_token}`,
-//       method: 'GET',
-//       json: true
-//     });
-
-//     ctx.body = { message: 'Authenticated', images: photos.data };
-
-//   } else {
-//     let auth_params = {
-//       instagram_url: INSTAGRAM_API + 'oauth/authorize',
-//       client_id: CLIENT_ID,
-//       response_type: 'code',
-//       scope: 'public_content'
-//     }
-//     ctx.body = { message: 'Not authenticated', auth_params };
-//   };
-
-// }));
+      ctx.body = { message: 'Successfully authenticated', user, data: { token } }
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = { message: 'Authentication failed', error }
+    }
+  })
 
 app.use(router.routes());
 
