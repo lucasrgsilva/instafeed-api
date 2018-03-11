@@ -8,7 +8,7 @@ const auth_middleware = async (ctx, next) => {
     await next();
   } catch (error) {
     ctx.status = 401
-    ctx.body = { message: 'Not Authorired' };    
+    ctx.body = error;
   }
 
 };

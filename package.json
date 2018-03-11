@@ -4,7 +4,7 @@
   "description": "Instagram Gallery API",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "nodemon server/index.js"
   },
   "author": "Lucas Rodrigues da Silva",
   "license": "ISC",

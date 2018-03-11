@@ -36,6 +36,10 @@ const UserSchema = new mongoose.Schema({
       type: String,
       required: true
     },
+    isValid: {
+      type: Boolean,
+      default: true
+    }
   }],
   access_token: {
     type: String
@@ -61,17 +65,20 @@ UserSchema.pre('save', function (next) {
   }
 });
 
-UserSchema.methods.toJSON = function () {
-  var user = this;
-  var userObject = user.toObject();
+// UserSchema.methods.toJSON = function () {
+//   var user = this;
+//   var userObject = user.toObject();
 
-  return _.pick(userObject, ['_id', 'email', 'name', 'date']);
-};
+//   return _.pick(userObject, ['_id', 'email', 'name', 'date']);
+// };
 
 UserSchema.methods.generateAuthToken = function () {
   var user = this;
   var access = 'auth';
-  var token = jwt.sign({ _id: user._id.toHexString(), access }, 'abc123').toString();
+  var token = jwt.sign(
+    { _id: user._id.toHexString(), access },
+    'abc123',
+  ).toString();
 
   user.tokens.push({ access, token });
 
@@ -86,7 +93,7 @@ UserSchema.statics.authenticate = function (email, password) {
 
   return User.findOne({ email }).then((user) => {
     if (!user) {
-      return Promise.reject();
+      return Promise.reject('Email or password is invalid.');
     }
 
     return new Promise((resolve, reject) => {
@@ -108,15 +115,15 @@ UserSchema.statics.findByToken = function (token) {
 
   try {
     decoded = jwt.verify(token, 'abc123');
+    return User.findOne({
+      '_id': decoded._id,
+      'tokens.token': token,
+      'tokens.access': 'auth',
+      'tokens.isValid': true
+    });
   } catch (e) {
-    return Promise.reject();
+    return Promise.reject(e);
   }
-
-  return User.findOne({
-    '_id': decoded._id,
-    'tokens.token': token,
-    'tokens.access': 'auth'
-  });
 };
 
 var User = mongoose.model('User', UserSchema);

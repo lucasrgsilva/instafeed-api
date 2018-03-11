@@ -9,26 +9,33 @@ const _ = require('lodash');
 
 const { Event } = require('./models/event');
 const { User } = require('./models/user');
+const { Media } = require('./models/media');
 const { auth_middleware } = require('./middleware/auth-middleware');
-
-mongoose.connect('mongodb://dmlkforis:lkmskmcsd@cluster0-shard-00-00-topof.mongodb.net:27017,cluster0-shard-00-01-topof.mongodb.net:27017,cluster0-shard-00-02-topof.mongodb.net:27017/instagram?ssl=true&replicaSet=Cluster0-shard-0&authSource=admin', { useMongoClient: true }, () => {
-  console.log("Connected to mongodb...")
-});
-
-const PORT = process.env.PORT || 5000
-const INSTAGRAM_API = 'https://api.instagram.com/';
-const CLIENT_ID = '20d1ab5af77445d9b09a46eaa6e3bb0c';
-const CLIENT_SECRET = 'add27729a01b41bead3d93da09581881';
 
 const app = new Koa();
 const router = new Router();
+
+const port = process.env.PORT;
+const INSTAGRAM_API = process.env.INSTAGRAM_API;
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 app.use(bodyParser());
 app.use(cors());
 
 router
-  .get('/api/', (ctx, next) => {
+  .get('/api/', auth_middleware, (ctx, next) => {
     ctx.body = 'It works!';
+  })
+
+  .post('/api/drop', async (ctx) => {
+    try {
+      await User.collection.drop();
+      await Event.collection.drop();
+      ctx.body = { message: 'ok' }
+    } catch (error) {
+      ctx.body = { error }
+    }
   })
 
   .get('/api/user', auth_middleware, async (ctx, next) => {
@@ -36,7 +43,7 @@ router
     ctx.body = { message: 'Successfully getted', user };
   })
 
-  .get('/api/user/:id', async (ctx, next) => {
+  .get('/api/user/:id', auth_middleware, async (ctx, next) => {
     const id = ctx.params.id;
 
     if (!ObjectID.isValid(id)) {
@@ -46,14 +53,6 @@ router
 
     const user = await User.findById(id);
     ctx.body = { message: 'Successfully getted the user', user };
-  })
-
-  .post('/api/user/drop', (ctx, next) => {
-    User.collection.drop().then(
-      ctx.body = {
-        message: 'Successfully droped'
-      }
-    );
   })
 
   .post('/api/user', async (ctx, next) => {
@@ -72,7 +71,7 @@ router
     }
   })
 
-  .get('/api/events', async (ctx, next) => {
+  .get('/api/events', auth_middleware, async (ctx, next) => {
     const events = await Event.find();
 
     if (events.length == 0) {
@@ -83,7 +82,7 @@ router
     ctx.body = { message: 'Successfully getted all events', events };
   })
 
-  .post('/api/events', async (ctx, next) => {
+  .post('/api/events', auth_middleware, async (ctx, next) => {
     const event = new Event({
       title: ctx.request.body.title,
       hashtags: ctx.request.body.hashtags,
@@ -96,11 +95,17 @@ router
     ctx.body = { message: 'Successfully created the event', event };
   })
 
-  .put('/api/events', (ctx, next) => {
+  .put('/api/events', auth_middleware, (ctx, next) => {
     ctx.body = { message: 'PUT /api/events - works' };
   })
 
-  .get('/api/events/:id', async (ctx, next) => {
+  // .get('/api/media/recent', (ctx) => {
+  //   const media = getRecentMedia();
+  //   await (new Media(media)).save();
+  //   ctx.body = media
+  // })
+
+  .get('/api/events/:id', auth_middleware, async (ctx, next) => {
     const id = ctx.params.id;
 
     if (!ObjectID.isValid(id)) {
@@ -112,30 +117,28 @@ router
       const event = await Event.findById(id);
       const user = await User.findById(event.userId);
 
+      // let media = await Media.findByEventId(eventId);
+      // if (!media.length) {
+      //   media = getRecentMedia();
+      //   await (new Media(media)).save();
+      // }
+      //
+      // ctx.body = media
+
       if (user.access_token) {
 
-        const instagramPromise = [];
+        // const media = new Media({
+        //   eventId: id,
+        //   media: imagesFiltered
+        // });
 
-        event.hashtags.forEach(hashtag => {
-          instagramPromise.push(request({
-            url: INSTAGRAM_API + `v1/tags/${hashtag}/media/recent?access_token=${user.access_token}`,
-            method: 'GET',
-            json: true
-          }));
-        });
+        // await media.save();
 
-        const images = await Promise.all(instagramPromise);
+        getRecentMedia(user)
 
         return ctx.body = {
           message: 'Successfully getted',
-          images:
-            images
-              .reduce((accumulator, currentValue) => {
-                return { data: [...accumulator.data, ...currentValue.data] };
-              }, { data: [] }).data
-              .filter((image, index, self) => {
-                return index === self.findIndex(e => e.id === image.id);
-              })
+          images: imagesFiltered
         };
       } else {
         ctx.status = 403;
@@ -149,7 +152,7 @@ router
 
   })
 
-  .del('/api/events/:id', async (ctx, next) => {
+  .del('/api/events/:id', auth_middleware, async (ctx, next) => {
     const id = ctx.params.id;
     // await Event.remove({});
     await Event.findOneAndRemove({ _id: id });
@@ -157,7 +160,7 @@ router
     ctx.body = { message: 'Successfully deleted' };
   })
 
-  .get('/api/instagram/credentials', (ctx, next) => {
+  .get('/api/instagram/credentials', auth_middleware, (ctx, next) => {
     const auth_params = {
       instagram_url: INSTAGRAM_API + 'oauth/authorize',
       client_id: CLIENT_ID,
@@ -167,7 +170,7 @@ router
     ctx.body = { message: 'Instagram oauth2 credentials', auth_params };
   })
 
-  .get('/api/instagram/auth', async (ctx, next) => {
+  .get('/api/instagram/auth', auth_middleware, async (ctx, next) => {
 
     const code = ctx.request.query.code;
     const eventId = ctx.request.query.eventId;
@@ -216,6 +219,45 @@ router
     }
   })
 
+  .post('/api/auth/logout', async (ctx, next) => {
+    const token = ctx.request.header['x-auth'];
+    try {
+      const user = await User.findByToken(token);
+      user.tokens[user.tokens.findIndex(crr => crr.token === token)].isValid = false;
+
+      await user.save();
+      ctx.body = { message: 'Successfully logged out', user };
+    } catch (error) {
+      ctx.body = { error };
+    }
+  })
+
+function getRecentMedia(event, access_token) {
+
+  return Promise.all(event.hashtags.map(hashtag => {
+    request({
+      url: INSTAGRAM_API + `v1/tags/${hashtag}/media/recent?access_token=${access_token}`,
+      method: 'GET',
+      json: true
+    })
+  }));
+
+
+  // event.hashtags.forEach(hashtag => {
+  //   instagramPromise.push();
+  // });
+
+  // const images = await Promise.all(instagramPromise);
+  // const imagesFiltered = images
+  //   .reduce((accumulator, currentValue) => {
+  //     return { data: [...accumulator.data, ...currentValue.data] };
+  //   }, { data: [] }).data
+  //   .filter((image, index, self) => {
+  //     return index === self.findIndex(e => e.id === image.id);
+  //   });
+
+}
+
 app.use(router.routes());
 
-app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+app.listen(port, () => console.log(`Listening on ${port}`));
